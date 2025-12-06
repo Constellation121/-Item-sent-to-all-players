@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎁 Event System - Aion</title>
+  <style>
+    body { font-family: Arial; background:#111; color:#eee; text-align:center; margin:0; padding:0; }
+    h1 { color:#00eaff; margin-top:20px; }
+    input, textarea, button { margin:8px; padding:8px; border-radius:6px; }
+    input, textarea { width:250px; background:#222; color:#eee; border:1px solid #444; }
+    table { margin:auto; border-collapse: collapse; width:80%; color:#ccc; margin-top:10px; }
+    th, td { border:1px solid #333; padding:6px; }
+    th { background:#222; color:#00eaff; }
+    button { background:#00eaff; border:none; color:#111; font-weight:bold; cursor:pointer; }
+    button:hover { background:#00b3cc; }
+    hr { border:0; border-top:1px solid #333; margin:20px 0; }
+  </style>
+</head>
+<body>
+  <h1>🎁 Send Items to Players</h1>
+
+  <div>
+    <label>Item ID:</label><br>
+    <input id="itemId" type="number" placeholder="Ex: 164000128"><br>
+    <label>Quantity:</label><br>
+    <input id="amount" type="number" placeholder="Ex: 5"><br>
+    <label>Title:</label><br>
+    <input id="title" type="text" placeholder="Online Event"><br>
+    <label>Message:</label><br>
+    <textarea id="message" placeholder="Event message..."></textarea><br>
+    <button onclick="sendItem()">📦 Send Item</button>
+  </div>
+
+  <hr>
+  <h2>👥 Recent Players (<span id="count">0</span>)</h2>
+  <table id="players">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Character</th>
+        <th>Account</th>
+        <th>Level</th>
+        <th>Race</th>
+        <th>Class</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function loadOnline() {
+      try {
+        const res = await fetch("/api/online");
+        const data = await res.json();
+        document.getElementById("count").textContent = data.total ?? 0;
+
+        const tbody = document.querySelector("#players tbody");
+        tbody.innerHTML = "";
+
+        if (!data.players || data.players.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6">No players found</td></tr>`;
+          return;
+        }
+
+        data.players.forEach(p => {
+          tbody.insertAdjacentHTML("beforeend", `
+            <tr>
+              <td>${p.char_id}</td>
+              <td>${p.character_name}</td>
+              <td>${p.account_name}</td>
+              <td>${p.level}</td>
+              <td>${p.race}</td>
+              <td>${p.class}</td>
+            </tr>
+          `);
+        });
+      } catch (err) {
+        console.error("Error loading:", err);
+      }
+    }
+
+    async function sendItem() {
+      const itemId = document.getElementById("itemId").value;
+      const amount = document.getElementById("amount").value;
+      const title = document.getElementById("title").value || "Online Event";
+      const message = document.getElementById("message").value || "Thank you for participating in the event!";
+
+      if (!itemId || !amount) return alert("⚠ Please enter the item ID and quantity!");
+
+      const res = await fetch("/api/sendItem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, amount, title, message })
+      });
+
+      const data = await res.json();
+      alert(data.message || data.error);
+      loadOnline();
+    }
+
+    loadOnline();
+    setInterval(loadOnline, 10000);
+  </script>
+</body>
+</html>
